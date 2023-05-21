@@ -1,3 +1,5 @@
+from sqlite3 import IntegrityError
+
 from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
@@ -5,13 +7,16 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from config import ADMINS
 from . import keyboards
 
+from database.bot_db import sql_command_insert
+
+
 
 class FSMAdmin(StatesGroup):
     id_mentor = State()
     name = State()
     age = State()
     course_name= State()
-    group = State()
+    group_name = State()
     submit = State()
 
 
@@ -26,7 +31,6 @@ async def fsm_start(message: types.Message):
 
 async def load_id_mentor(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        data['id'] = message.from_user.id
         data['username'] = f"@{message.from_user.username}" if message.from_user.username else None
         data['id_mentor'] = message.text
     await FSMAdmin.next()
@@ -60,17 +64,22 @@ async def load_course_name(message: types.Message, state: FSMContext):
 
 async def load_group(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        data['group'] = message.text
+        data['group_name'] = message.text
     await message.answer(f"{data['id_mentor']} {data['name']} {data['age']} "
-                    f"{data['course_name']} {data['group']}")
+                    f"{data['course_name']} {data['group_name']}")
     await FSMAdmin.next()
     await message.answer('Все верно?', reply_markup=keyboards.submit_markup)
+    # await message.answer('Все верно?', text=message.text)
 
 
 async def submit(message: types.Message, state: FSMContext):
     if message.text.lower() == "да":
+        try:
+            await sql_command_insert(state)
+            await message.answer("Регистрация прошла успешно!")
+        except IntegrityError:
+            await message.answer("Вы уже регистрировались!")
         await state.finish()
-        await message.answer("Регистрация прошла успешно!")
     elif message.text.lower() == "заново":
         await FSMAdmin.id_mentor.set()
         await message.answer("Какой у вас id?")
@@ -95,5 +104,5 @@ def register_handlers_forms(db: Dispatcher):
     db.register_message_handler(load_name, state=FSMAdmin.name)
     db.register_message_handler(load_age, state=FSMAdmin.age)
     db.register_message_handler(load_course_name, state=FSMAdmin.course_name)
-    db.register_message_handler(load_group, state=FSMAdmin.group)
+    db.register_message_handler(load_group, state=FSMAdmin.group_name)
     db.register_message_handler(submit, state=FSMAdmin.submit)
