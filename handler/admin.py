@@ -5,7 +5,7 @@ from config import bot, ADMINS
 
 
 async def game_emoji(message: types.Message):
-    a = ["🎰", "🎯", "🏀", "⚽", "🎲", "🎳"]
+    a = ["🎰", "🎯", "🏀", "⚽","🎲","🎳"]
     i = choice(a)
     await bot.send_dice(message.chat.id, emoji=i)
 
