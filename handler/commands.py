@@ -2,14 +2,18 @@ from aiogram import types, Dispatcher
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from config import bot
 
+from database.bot_db import sql_command_random
+from parser.novosti import parser
 
 
 async def start_handler(message: types.Message):
     with open(r'C:\Users\Admin\Pictures\mem.png', 'rb') as photo:
         await bot.send_photo(message.chat.id, photo)
 
-async  def to_pin(message: types.Message):
+
+async def to_pin(message: types.Message):
     await message.reply_to_message.pin()
+
 
 async def quiz_1(message: types.Message):
     markup = InlineKeyboardMarkup()
@@ -38,11 +42,27 @@ async def quiz_1(message: types.Message):
     )
 
 
+async def get_user(message: types.Message):
+    user: tuple = await sql_command_random()
+    await message.answer(
+        f"Имя: {user[3]} Возраст: {user[4]} "
+        f"Направлние: {user[5]} Группа: {user[6]} "
+    )
+
+
+async def novosti_handler(message: types.Message):
+    for data in parser():
+        await message.answer(
+            f"{data['img']}\n"
+            f"{data['title']}\n"
+            f"{data['url']}\n"
+            f"{data['date']}"
+        )
 
 
 def register_handlers_commands(db: Dispatcher):
     db.register_message_handler(start_handler, commands=['mem'])
     db.register_message_handler(quiz_1, commands=['quiz'])
     db.register_message_handler(to_pin, commands=['pin'], commands_prefix='!')
-
-
+    db.register_message_handler(get_user, commands=['get'])
+    db.register_message_handler(novosti_handler, commands=['parser'])
